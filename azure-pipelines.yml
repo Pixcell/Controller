@@ -13,118 +13,113 @@ trigger:
 pr:
   - master
 
-pool:
-  vmImage: 'Ubuntu-16.04'
-
-variables:
-  repository: 'focal-freedom-236620/controller'
-  type: $(Build.SourceBranchName)
-  commit: $(Build.SourceVersion)
-  controller_tar:
+pool: server
 
 steps:
-  - task: NodeTool@0
+  - task: InvokeRESTAPI@1
     inputs:
-      versionSpec: '8.x'
-    displayName: 'Install Node.js'
+      connectionType: 'connectedServiceName'
+      serviceConnection: 'Pipelines'
+      method: 'POST'
+      urlSuffix: '/edgeworx/_apis/build/builds?api-version=5.0'
+      body: "{\"Parameters\":\"{\\\"images.controller\\\": \\\"$(test)\\\", \\\"images.connector\\\": \\\"$(test)\\\"}\", \"Definition\":{\"id\":\"5\"}}"
+      waitForCompletion: 'false'
 
-  - script: |
-      npm install
-      npm run build
-    displayName: 'npm install and build'
-
-  - script: |
-      npm test
-    displayName: 'unit tests'
-
-  - script: |
-      echo "npm test"
-    displayName: 'integration tests'
-
-  - script: |
-      npm pack
-      pwd
-      ls
-    displayName: 'npm pack'
-
-  - bash: |
-      echo checking pack file exists..
-      tar=$(ls iofogcontroller-*.tgz)
-      echo $tar
-      echo "##vso[task.setvariable variable=controller_tar]$tar"
-    displayName: 'controller_tar check'
-    name: setcontrollertarvarStep
-
-  - task: Docker@2
-    displayName: 'build dev docker'
-    inputs:
-      containerRegistry: 'Edgeworx GCP'
-      repository: $(repository)
-      command: 'build'
-      Dockerfile: 'Dockerfile.dev'
-      arguments: --build-arg FILENAME=$(controller_tar)
-      tags: |
-        dev-$(commit)
-        dev-$(type)
-        dev-latest
-
-  - task: Docker@2
-    displayName: 'push dev docker'
-    inputs:
-      containerRegistry: 'Edgeworx GCP'
-      repository: $(repository)
-      command: 'push'
-      Dockerfile: 'Dockerfile.dev'
-      tags: |
-        dev-$(commit)
-        dev-$(type)
-        dev-latest
-
-  - task: Docker@2
-    displayName: 'build rel docker'
-    inputs:
-      containerRegistry: 'Edgeworx GCP'
-      repository: $(repository)
-      command: 'build'
-      Dockerfile: 'Dockerfile.rel'
-      arguments: --build-arg FILENAME=$(controller_tar)
-      tags: |
-        rel-$(commit)
-        rel-$(type)
-        rel-latest
-
-  - task: Docker@2
-    displayName: 'push rel docker'
-    inputs:
-      containerRegistry: 'Edgeworx GCP'
-      repository: $(repository)
-      command: 'push'
-      Dockerfile: 'Dockerfile.rel'
-      tags: |
-        rel-$(commit)
-        rel-$(type)
-        rel-latest
-
-  - script: |
-      echo "npm test"
-    displayName: 'api tests'
-
-  - task: CopyFiles@2
-    inputs:
-      SourceFolder: $(System.DefaultWorkingDirectory)
-      TargetFolder: $(Build.ArtifactStagingDirectory)
-      Contents: |
-        *.tgz
-      OverWrite: true
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: 'controller'
-
-#  - task: Npm@1
-#    displayName: 'publish npm package'
+#  - task: InvokeRESTAPI@1
 #    inputs:
-#      command: 'publish'
-#      publishRegistry: 'useFeed'
-#      publishFeed: 'edgeworx'
+#      connectionType: 'connectedServiceName'
+#      serviceConnection: 'Pipelines'
+#      method: 'GET'
+#      urlSuffix: /edgeworx/_apis/build/definitions?api-version=5.0
+#      waitForCompletion: 'true'
+
+  # - task: InvokeRESTAPI@1
+  #   inputs:
+  #     connectionType: 'connectedServiceName'
+  #     serviceConnection: 'Pipelines'
+  #     method: 'POST'
+  #     urlSuffix: /edgeworx/_apis/build/builds?api-version=5.0&organization=edgeworx&project=edgeworx&sourceBuildId=5
+  #     body: |
+  #       { 
+  #         "parameters": "{ 
+  #           \"images.controller\":  \"test\"
+  #           }",
+  #         "buildNumber": 5
+  #       }
+
+#  - task: InvokeRESTAPI@1
+#    inputs:
+#      connectionType: 'connectedServiceName'
+#      serviceConnection: 'Pipelines'
+#      method: 'POST'
+#      urlSuffix: /edgeworx/_apis/build/builds?api-version=5.0&organization=edgeworx&project=edgeworx
+#      body: |
+#        { "parameters": "{ 
+#            \"images.controller\":  \"test\"
+#            }",
+#          "definition": "{
+#            \"_links\": {
+#             \"self\": {
+#               \"href\": \"https://dev.azure.com/edgeworx/02af0506-ca6c-431d-8a76-cd5bfa0783c0/_apis/build/Definitions/5?revision=7\"
+#             },
+#             \"web\": {
+#               \"href\": \"https://dev.azure.com/edgeworx/02af0506-ca6c-431d-8a76-cd5bfa0783c0/_build/definition?definitionId=5\"
+#             },
+#             \"editor\": {
+#               \"href\": \"https://dev.azure.com/edgeworx/02af0506-ca6c-431d-8a76-cd5bfa0783c0/_build/designer?id=5&_a=edit-build-definition\"
+#             },
+#             \"badge\": {
+#               \"href\": \"https://dev.azure.com/edgeworx/02af0506-ca6c-431d-8a76-cd5bfa0783c0/_apis/build/status/5\"
+#             }
+#           },
+#           \"quality\": \"definition\",
+#           \"authoredBy\": {
+#             \"displayName\": \"serge\",
+#             \"url\": \"https://spsprodcus2.vssps.visualstudio.com/Aa165685e-f191-49b1-92d0-2ce1d338b7c0/_apis/Identities/809eb490-8d69-65ba-a462-0764cd512243\",
+#             \"_links\": {
+#               \"avatar\": {
+#                 \"href\": \"https://dev.azure.com/edgeworx/_apis/GraphProfile/MemberAvatars/msa.ODA5ZWI0OTAtOGQ2OS03NWJhLWE0NjItMDc2NGNkNTEyMjQz\"
+#               }
+#             },
+#             \"id\": \"809eb490-8d69-65ba-a462-0764cd512243\",
+#             \"uniqueName\": \"serge@edgeworx.io\",
+#             \"imageUrl\": \"https://dev.azure.com/edgeworx/_apis/GraphProfile/MemberAvatars/msa.ODA5ZWI0OTAtOGQ2OS03NWJhLWE0NjItMDc2NGNkNTEyMjQz\",
+#             \"descriptor\": \"msa.ODA5ZWI0OTAtOGQ2OS03NWJhLWE0NjItMDc2NGNkNTEyMjQz\"
+#           },
+#           \"drafts\": [],
+#           \"queue\": {
+#             \"_links\": {
+#               \"self\": {
+#                 \"href\": \"https://dev.azure.com/edgeworx/_apis/build/Queues/16\"
+#               }
+#             },
+#             \"id\": 16,
+#             \"name\": \"Hosted Ubuntu 1604\",
+#             \"url\": \"https://dev.azure.com/edgeworx/_apis/build/Queues/16\",
+#             \"pool\": {
+#               \"id\": 8,
+#               \"name\": \"Hosted Ubuntu 1604\",
+#               \"isHosted\": true
+#             }
+#           },
+#           \"id\": 5,
+#           \"name\": \"eclipse-iofog.platform\",
+#           \"url\": \"https://dev.azure.com/edgeworx/02af0506-ca6c-431d-8a76-cd5bfa0783c0/_apis/build/Definitions/5?revision=7\",
+#           \"uri\": \"vstfs:///Build/Definition/5\",
+#           \"path\": \"\\\",
+#           \"type\": \"build\",
+#           \"queueStatus\": \"enabled\",
+#           \"revision\": 7,
+#           \"createdDate\": \"2019-05-04T07:12:57.677Z\",
+#           \"project\": {
+#             \"id\": \"02af0506-ca6c-431d-8a76-cd5bfa0783c0\",
+#             \"name\": \"edgeworx\",
+#             \"url\": \"https://dev.azure.com/edgeworx/_apis/projects/02af0506-ca6c-431d-8a76-cd5bfa0783c0\",
+#             \"state\": \"wellFormed\",
+#             \"revision\": 22,
+#             \"visibility\": \"private\",
+#             \"lastUpdateTime\": \"2019-05-02T01:12:59.29Z\"
+#           }
+#          }"
+#        }
+#      waitForCompletion: 'false'
